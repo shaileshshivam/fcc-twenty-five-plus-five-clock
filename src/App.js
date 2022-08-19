@@ -1,19 +1,64 @@
 import { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import Counter from "./components/Counter";
-import { useCounter } from "./hooks/useCounter";
+import { PlayerPlay, PlayerStop, Refresh } from 'tabler-icons-react';
 
+
+
+const Container = styled.div`
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  width:100%;
+`
 
 const TimerLabel = styled.span`
   text-transform: uppercase;
+  position:absolute;
+  font-size:2rem;
+  top:5rem;
+  letter-spacing:0.5rem;
+  right: 50%;
+  transform:translateX(50%);
 `
 
-const TimeLeft = styled.span`
-  font-size: 5rem;
-  color: ${props => props.timeElapsed < 60 ? "red" : "blue"};
+const TimeElapsed = styled.span`
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
+  position:relative;
+  font-size: 8rem;
+  color: ${props => props.timerValue < 60 ? "red" : "blue"};
+  // border: 1px solid black;
+  padding:4rem;
+  letter-spacing:4px;
+  border-radius:5rem;
+  height:32rem;
+  width:32rem;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 `
 const Button = styled.button`
+background:none;
+    border:none;
+    outline:none;
 `
+
+const ButtonContainer = styled.div`
+  position:absolute;
+  display:flex;
+  justify-content:center;
+  gap:1rem;
+  bottom:calc((100vh - 40rem));
+  right: 50%;
+  transform: translateX(50%);
+`
+
+const iconProps = {
+  size: "32"
+}
+
 
 function getMinutesAndSeconds(timeInSeconds) {
 
@@ -35,11 +80,13 @@ function App() {
 
   const [timerType, setTimerType] = useState("session")
   const [isActive, setIsActive] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(0)
+  const [timeElapsed, setTimeElapsed] = useState(0)
 
   const [sessionLength, setSessionLength] = useState(25)
   const [breakLength, setBreakLength] = useState(5)
 
+  const timerRef = useRef();
+  const audioRef = useRef();
 
   function incrementSession() {
     if (sessionLength < 60) {
@@ -66,13 +113,11 @@ function App() {
     }
   }
 
-  const timerRef = useRef();
-  const audioRef = useRef();
-
   useEffect(() => {
+
     if (isActive && !timerRef.current) {
       timerRef.current = setInterval(() => {
-        setTimeLeft(timeLeft => timeLeft + 1)
+        setTimeElapsed(timeElapsed => timeElapsed + 1)
       }, 1000)
     }
 
@@ -86,18 +131,18 @@ function App() {
 
 
 
-    if (timeLeft === (timeToCompare * 60)) {
+    if (timeElapsed === (timeToCompare * 60)) {
       audioRef.current.currentTime = 0
       if (timerRef.current) {
         clearInterval(timerRef.current)
         timerRef.current = null;
       }
-      setTimeLeft(0)
+      setTimeElapsed(0)
       setTimerType(nextTimerType)
       audioRef.current.play();
     }
 
-  }, [isActive, timerType, timeLeft, sessionLength, breakLength])
+  }, [isActive, timerType, timeElapsed, sessionLength, breakLength])
 
   function toggleTimerActive() {
     setIsActive((isActive) => !isActive)
@@ -105,7 +150,7 @@ function App() {
 
   function resetTimer() {
     setIsActive(false);
-    setTimeLeft(0)
+    setTimeElapsed(0)
     setBreakLength(5)
     setSessionLength(25)
     setTimerType("session")
@@ -117,39 +162,50 @@ function App() {
     audioRef.current.currentTime = 0
   }
 
+  const timerValue = timerType === "session" ?
+    (sessionLength * 60 - timeElapsed) :
+    (breakLength * 60 - timeElapsed)
+
   return (
-    <div>
+    <Container>
       <Counter
+        style={{ position: "absolute", top: "25vh", left: "calc((100vw - 32rem) / 3)" }}
         name="session"
         disabled={isActive}
         count={sessionLength}
         incrementCount={incrementSession}
         decrementCount={decrementSession}
       />
+
+      <TimeElapsed id="time-left" timerValue={timerValue}>
+        {
+          getMinutesAndSeconds(timerValue)
+        }
+        <TimerLabel id="timer-label">{timerType}</TimerLabel>
+      </TimeElapsed>
+
       <Counter
+        style={{ position: "absolute", top: "25vh", right: "calc((100vw - 32rem) / 3)" }}
         name="break"
         disabled={isActive}
         count={breakLength}
         incrementCount={incrementBreak}
         decrementCount={decrementBreak}
       />
-
-      <TimerLabel id="timer-label">{timerType}</TimerLabel>
-      <TimeLeft id="time-left">
-        {
-          timerType === "session" ?
-            getMinutesAndSeconds(sessionLength * 60 - timeLeft) :
-            getMinutesAndSeconds(breakLength * 60 - timeLeft)
-        }
-      </TimeLeft>
-      <Button id="start_stop" onClick={toggleTimerActive}>start/stop</Button>
-      <Button id="reset" onClick={resetTimer}>reset</Button>
+      <ButtonContainer>
+        <Button id="start_stop" onClick={toggleTimerActive}>
+          {
+            isActive ? <PlayerStop {...iconProps} /> : <PlayerPlay {...iconProps} />
+          }
+        </Button>
+        <Button id="reset" onClick={resetTimer}><Refresh {...iconProps} /></Button>
+      </ButtonContainer>
       <audio
         id="beep"
         ref={audioRef}
         src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
       ></audio>
-    </div>
+    </Container>
   );
 }
 
