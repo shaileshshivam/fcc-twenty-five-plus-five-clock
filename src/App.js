@@ -12,139 +12,141 @@ const TimeLeft = styled.span`
   font-size: 5rem;
   color: ${props => props.timeElapsed < 60 ? "red" : "blue"};
 `
-
-
-function decrementPredicate(value) {
-  console.log("calling predicate in hook")
-  if (value < 2) {
-    return false
-  }
-  return true
-}
-
-function incrementPredicate(value) {
-  if (value > 59) {
-    return false
-  }
-  return true
-}
-
 const Button = styled.button`
 `
 
-function twoDigitNumber(number) {
-  if (number > -1 && number < 10) {
-    return `0${number}`
-  }
-  return number
-}
-
 function getMinutesAndSeconds(timeInSeconds) {
+
+  function twoDigitNumber(number) {
+    if (number > -1 && number < 10) {
+      return `0${number}`
+    }
+    return number
+  }
+
   const minutes = Math.floor(timeInSeconds / 60)
   const seconds = timeInSeconds % 60
+
   return `${twoDigitNumber(minutes)}:${twoDigitNumber(seconds)}`
 }
 
 function App() {
 
-  const [showTimerValue, setShowTimerValue] = useState(false);
-  const sessionCounter = useCounter({ initialValue: 25, incrementPredicate, decrementPredicate })
-  const breakCounter = useCounter({ initialValue: 5, incrementPredicate, decrementPredicate })
 
   const [timerType, setTimerType] = useState("session")
   const [isActive, setIsActive] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(0)
 
-  const audioRef = useRef()
+  const [sessionLength, setSessionLength] = useState(25)
+  const [breakLength, setBreakLength] = useState(5)
 
-  const [timeElapsed, setTimeElapsed] = useState(sessionCounter.count * 60)//
 
-  useEffect(() => {
-    if (!showTimerValue) {
-      setTimeElapsed(sessionCounter.count * 60) //
+  function incrementSession() {
+    if (sessionLength < 60) {
+      setSessionLength(sessionLength => sessionLength + 1)
     }
-  }, [sessionCounter.count, showTimerValue])
+  }
+
+  function decrementSession() {
+    if (sessionLength > 1) {
+      setSessionLength(sessionLength => sessionLength - 1)
+    }
+  }
+
+
+  function incrementBreak() {
+    if (breakLength < 60) {
+      setBreakLength(breakLength => breakLength + 1)
+    }
+  }
+
+  function decrementBreak() {
+    if (breakLength > 1) {
+      setBreakLength(breakLength => breakLength - 1)
+    }
+  }
 
   const timerRef = useRef();
+  const audioRef = useRef();
 
   useEffect(() => {
-
-    if (timeElapsed === 0) {
-      audioRef.current.play();
-    }
-
     if (isActive && !timerRef.current) {
       timerRef.current = setInterval(() => {
-        setTimeElapsed((timeElapsed) => timeElapsed - 1)
+        setTimeLeft(timeLeft => timeLeft + 1)
       }, 1000)
-    } else {
-      if (!isActive && timerRef.current) {
+    }
+
+    if (!isActive && timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null;
+    }
+
+    const timeToCompare = timerType === "session" ? sessionLength : breakLength
+    const nextTimerType = timerType === "session" ? "break" : "session"
+
+
+
+    if (timeLeft === (timeToCompare * 60)) {
+      audioRef.current.currentTime = 0
+      if (timerRef.current) {
         clearInterval(timerRef.current)
         timerRef.current = null;
       }
-
-      if (timeElapsed === -1) {
-        const nextTimerType = timerType === "session" ? "break" : "session"
-        const nextTimeElapsed = timerType === "session" ? breakCounter.count * 60 : sessionCounter.count * 60 //
-        setTimerType(nextTimerType)
-        setTimeElapsed(nextTimeElapsed)
-      }
+      setTimeLeft(0)
+      setTimerType(nextTimerType)
+      audioRef.current.play();
     }
-  }, [isActive, timerType, timeElapsed, breakCounter.count, sessionCounter.count])
 
+  }, [isActive, timerType, timeLeft, sessionLength, breakLength])
 
-  console.log({
-    isActive,
-    timerType,
-    timeElapsed,
-    sessionCounter,
-    breakCounter
-  })
-
-  function reset() {
-    setTimerType("session");
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-    }
-    sessionCounter.reset();
-    breakCounter.reset();
-    setShowTimerValue(false);
+  function toggleTimerActive() {
+    setIsActive((isActive) => !isActive)
   }
 
-  function startStopTimer() {
-    setIsActive(isActive => !isActive)
-    setShowTimerValue(true);
+  function resetTimer() {
+    setIsActive(false);
+    setTimeLeft(0)
+    setBreakLength(5)
+    setSessionLength(25)
+    setTimerType("session")
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null;
+    }
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0
   }
 
   return (
     <div>
-      <h1>App works !</h1>
-
       <Counter
         name="session"
-        count={sessionCounter.count}
-        incrementCount={sessionCounter.incrementCount}
-        decrementCount={sessionCounter.decrementCount}
+        disabled={isActive}
+        count={sessionLength}
+        incrementCount={incrementSession}
+        decrementCount={decrementSession}
       />
       <Counter
         name="break"
-        count={breakCounter.count}
-        incrementCount={breakCounter.incrementCount}
-        decrementCount={breakCounter.decrementCount}
+        disabled={isActive}
+        count={breakLength}
+        incrementCount={incrementBreak}
+        decrementCount={decrementBreak}
       />
 
       <TimerLabel id="timer-label">{timerType}</TimerLabel>
-      <TimeLeft id="time-left" timeElapsed={timeElapsed}>
+      <TimeLeft id="time-left">
         {
-          showTimerValue ?
-            getMinutesAndSeconds(timeElapsed) :
-            getMinutesAndSeconds(sessionCounter.count * 60) //
+          timerType === "session" ?
+            getMinutesAndSeconds(sessionLength * 60 - timeLeft) :
+            getMinutesAndSeconds(breakLength * 60 - timeLeft)
         }
       </TimeLeft>
-      <Button id="start_stop" onClick={startStopTimer}>start/stop</Button>
-      <Button id="reset" onClick={reset}>reset</Button>
+      <Button id="start_stop" onClick={toggleTimerActive}>start/stop</Button>
+      <Button id="reset" onClick={resetTimer}>reset</Button>
       <audio
-        ref={audioRef}
         id="beep"
+        ref={audioRef}
         src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
       ></audio>
     </div>

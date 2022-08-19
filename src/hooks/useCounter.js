@@ -1,30 +1,34 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 const defaultProps = {
     initialValue: 0,
-    incrementPredicate: (count) => true,
-    decrementPredicate: (count) => true
 }
 
 export function useCounter({
     initialValue = defaultProps.initialValue,
-    decrementPredicate = defaultProps.decrementPredicate,
-    incrementPredicate = defaultProps.incrementPredicate
+    setTimeLeft
 }) {
 
     const [count, setCount] = useState(initialValue);
 
     function incrementCount() {
-        if (incrementPredicate(count)) {
-            setCount((count) => count + 1);
-        }
+        setCount((count) => {
+            if (count < 60) {
+                return count + 1
+            }
+            return count
+        })
+        setTimeLeft(0);
     }
 
     function decrementCount() {
-        console.log("count", count)
-        if (decrementPredicate(count)) {
-            setCount((count) => count - 1)
-        }
+        setCount((count) => {
+            if (count > 1) {
+                return count - 1
+            }
+            return count
+        })
+        setTimeLeft(0);
     }
 
     function reset() {
