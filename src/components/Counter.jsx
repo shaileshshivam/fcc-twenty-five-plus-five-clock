@@ -14,7 +14,9 @@ const ButtonContainer = styled.div`
     gap:1rem;
 `
 
-const Name = styled.span``
+const Name = styled.span`
+text-transform:uppercase;
+`
 
 const Count = styled.span`
     font-size:2rem;
@@ -22,13 +24,24 @@ const Count = styled.span`
 
 const Container = styled.div`
     display:flex;
+    padding:2rem;
     border-radius:50%;
     flex-direction:column;
     justify-content:center;
-    width:10rem;
-    height:10rem;
+    align-items:center;
     text-align:center;
+    width:11rem;
+    height:11rem;
     box-shadow: rgba(67, 71, 85, 0.27) 0px 0px 0.25em, rgba(90, 125, 188, 0.05) 0px 0.25em 1em;
+    background-color:white;
+
+
+  @media screen and (max-width: 1216px) {
+    width:32rem;
+    border-radius:1rem;
+    gap:1rem;
+  }
+
 `
 
 function Counter({ name, count, incrementCount, decrementCount, disabled, style }) {
