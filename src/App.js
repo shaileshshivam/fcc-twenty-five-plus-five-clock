@@ -1,8 +1,20 @@
 import { useState, useRef, useEffect } from "react";
-import styled from "styled-components";
-import Counter from "./components/Counter";
 import { PlayerPlay, PlayerStop, Refresh } from 'tabler-icons-react';
+import styled from "styled-components";
 
+import Counter from "./components/Counter";
+
+import { getMinutesAndSeconds } from "./utils"
+import {
+  SESSION,
+  BREAK,
+  SESSION_LENGTH,
+  BREAK_LENGTH,
+  MIN_LENGTH,
+  MAX_LENGTH,
+  SECONDS_IN_ONE_MINUTE,
+  TIMER_BEEP_URL
+} from "./constants"
 
 
 const Container = styled.div`
@@ -14,11 +26,9 @@ const Container = styled.div`
   gap:3rem;
 
   @media screen and (max-width: 1216px) {
-    flex-direction:column;
     gap:1rem;
+    flex-direction: column;
   }
-
-
 `
 
 const TimerLabel = styled.span`
@@ -33,25 +43,21 @@ const TimerLabel = styled.span`
 `
 
 const TimeElapsed = styled.span`
-
   background-color:white;
   box-shadow: rgba(0, 0, 0, 0.09) 0px 3px 12px;
   position:relative;
   font-size: 8rem;
   color: ${props => props.timerValue < 60 ? "red" : "blue"};
-  // border: 1px solid black;
   padding:4rem;
   letter-spacing:4px;
   border-radius:5rem;
   height:32rem;
   width:32rem;
   border-radius:50%;
-
   display:flex;
   flex-direction:column;
   justify-content:center;
   align-items:center;
-
   color: #121212;
   text-align: center;
   letter-spacing: 5px;
@@ -83,14 +89,14 @@ const TimeElapsed = styled.span`
       -25px 51px 1px #eaeaea,
       -26px 53px 1px #efefef;
 
-
       @media screen and (max-width: 1216px) {
         border-radius:1rem;
+        font-size:7rem;
       }
 
 `
 const Button = styled.button`
-background:none;
+    background:none;
     border:none;
     outline:none;
 `
@@ -118,68 +124,75 @@ const iconStyle = {
   boxShadow: "rgba(67, 71, 85, 0.27) 0px 0px 0.25em, rgba(90, 125, 188, 0.05) 0px 0.25em 1em"
 }
 
-
-function getMinutesAndSeconds(timeInSeconds) {
-
-  function twoDigitNumber(number) {
-    if (number > -1 && number < 10) {
-      return `0${number}`
-    }
-    return number
-  }
-
-  const minutes = Math.floor(timeInSeconds / 60)
-  const seconds = timeInSeconds % 60
-
-  return `${twoDigitNumber(minutes)}:${twoDigitNumber(seconds)}`
-}
-
 function App() {
 
 
-  const [timerType, setTimerType] = useState("session")
+  const [timerType, setTimerType] = useState(SESSION)
   const [isActive, setIsActive] = useState(false)
   const [timeElapsed, setTimeElapsed] = useState(0)
 
-  const [sessionLength, setSessionLength] = useState(25)
-  const [breakLength, setBreakLength] = useState(5)
+  const [sessionLength, setSessionLength] = useState(SESSION_LENGTH)
+  const [breakLength, setBreakLength] = useState(BREAK_LENGTH)
 
   const timerRef = useRef();
   const audioRef = useRef();
 
+  function playAudio() {
+    audioRef.current.currentTime = 0
+    audioRef.current.play();
+  }
+
+  function pauseAudio() {
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0
+  }
+
+  function startTimer() {
+    timerRef.current = setInterval(() => {
+      setTimeElapsed(timeElapsed => timeElapsed + 1)
+    }, 1000)
+  }
+
+  function clearTimer() {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null;
+    }
+  }
+
   function incrementSession() {
-    if (sessionLength < 60) {
+    if (sessionLength < MAX_LENGTH) {
       setSessionLength(sessionLength => sessionLength + 1)
     }
-    if (!isActive) {
+    if (!isActive && timerType === SESSION) {
       setTimeElapsed(0)
     }
   }
 
   function decrementSession() {
-    if (sessionLength > 1) {
+    if (sessionLength > MIN_LENGTH) {
       setSessionLength(sessionLength => sessionLength - 1)
     }
-    if (!isActive) {
+    if (!isActive && timerType === SESSION) {
       setTimeElapsed(0)
     }
   }
 
 
   function incrementBreak() {
-    if (breakLength < 60) {
+    if (breakLength < MAX_LENGTH) {
       setBreakLength(breakLength => breakLength + 1)
     }
-    if (!isActive) {
+    if (!isActive && timerType === BREAK) {
       setTimeElapsed(0)
     }
   }
 
   function decrementBreak() {
-    if (breakLength > 1) {
+    if (breakLength > MIN_LENGTH) {
       setBreakLength(breakLength => breakLength - 1)
     }
-    if (!isActive) {
+    if (!isActive && timerType === BREAK) {
       setTimeElapsed(0)
     }
   }
@@ -187,62 +200,52 @@ function App() {
   useEffect(() => {
 
     if (isActive && !timerRef.current) {
-      timerRef.current = setInterval(() => {
-        setTimeElapsed(timeElapsed => timeElapsed + 1)
-      }, 1000)
+      startTimer();
     }
 
     if (!isActive && timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null;
+      clearTimer();
     }
 
-    const timeToCompare = timerType === "session" ? sessionLength : breakLength
-    const nextTimerType = timerType === "session" ? "break" : "session"
+    const timeToCompare = timerType === SESSION ? sessionLength : breakLength
+    const nextTimerType = timerType === SESSION ? BREAK : SESSION
 
 
 
-    if (timeElapsed === (timeToCompare * 60) + 1) {
-      audioRef.current.currentTime = 0
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null;
-      }
+    if (timeElapsed === (timeToCompare * SECONDS_IN_ONE_MINUTE) + 1) {
+      clearTimer();
       setTimeElapsed(0)
       setTimerType(nextTimerType)
-      audioRef.current.play();
+      playAudio();
+
     }
 
   }, [isActive, timerType, timeElapsed, sessionLength, breakLength])
 
-  function toggleTimerActive() {
+  function toggleActiveState() {
     setIsActive((isActive) => !isActive)
   }
 
-  function resetTimer() {
+  function resetClock() {
     setIsActive(false);
     setTimeElapsed(0)
-    setBreakLength(5)
-    setSessionLength(25)
-    setTimerType("session")
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null;
-    }
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0
+    setBreakLength(BREAK_LENGTH)
+    setSessionLength(SESSION_LENGTH)
+    setTimerType(SESSION)
+    clearTimer();
+    pauseAudio();
   }
 
-  let timerValue = timerType === "session" ?
-    (sessionLength * 60 - timeElapsed) :
-    (breakLength * 60 - timeElapsed)
+  let timerValue = timerType === SESSION ?
+    (sessionLength * SECONDS_IN_ONE_MINUTE - timeElapsed) :
+    (breakLength * SECONDS_IN_ONE_MINUTE - timeElapsed)
 
   timerValue = timerValue >= 0 ? timerValue : 0
 
   return (
     <Container>
       <Counter
-        name="session"
+        name={SESSION}
         disabled={isActive}
         count={sessionLength}
         incrementCount={incrementSession}
@@ -252,32 +255,36 @@ function App() {
       <TimeElapsed timerValue={timerValue}>
 
         <TimerLabel id="timer-label">{timerType}</TimerLabel>
-        <span id="time-left">{
-          getMinutesAndSeconds(timerValue)
-        }</span>
+        <span id="time-left">
+          {
+            getMinutesAndSeconds(timerValue)
+          }
+        </span>
         <ButtonContainer>
-          <Button id="start_stop" onClick={toggleTimerActive} style={{ ...iconStyle, backgroundColor: isActive ? "red" : "green" }} >
+          <Button id="start_stop" onClick={toggleActiveState} style={{ ...iconStyle, backgroundColor: isActive ? "red" : "green" }} >
             {
               isActive ? <PlayerStop {...iconProps} /> : <PlayerPlay {...iconProps} />
             }
           </Button>
-          <Button id="reset" style={{ ...iconStyle, backgroundColor: "#532ad0" }} onClick={resetTimer}><Refresh  {...iconProps} /></Button>
+          <Button id="reset" style={{ ...iconStyle, backgroundColor: "#532ad0" }} onClick={resetClock}><Refresh  {...iconProps} /></Button>
         </ButtonContainer>
       </TimeElapsed>
 
 
       <Counter
-        name="break"
+        name={BREAK}
         disabled={isActive}
         count={breakLength}
         incrementCount={incrementBreak}
         decrementCount={decrementBreak}
       />
+
       <audio
         id="beep"
         ref={audioRef}
-        src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
+        src={TIMER_BEEP_URL}
       ></audio>
+
     </Container>
   );
 }

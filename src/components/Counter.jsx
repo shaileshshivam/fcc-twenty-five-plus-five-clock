@@ -15,7 +15,7 @@ const ButtonContainer = styled.div`
 `
 
 const Name = styled.span`
-text-transform:uppercase;
+    text-transform:uppercase;
 `
 
 const Count = styled.span`
@@ -30,10 +30,11 @@ const Container = styled.div`
     justify-content:center;
     align-items:center;
     text-align:center;
-    width:11rem;
-    height:11rem;
+    width:12rem;
+    height:12rem;
     box-shadow: rgba(67, 71, 85, 0.27) 0px 0px 0.25em, rgba(90, 125, 188, 0.05) 0px 0.25em 1em;
     background-color:white;
+    padding:1rem;
 
 
   @media screen and (max-width: 1216px) {
@@ -44,8 +45,8 @@ const Container = styled.div`
 
 `
 
-function Counter({ name, count, incrementCount, decrementCount, disabled, style }) {
-    return <Container style={style}>
+function Counter({ name, count, incrementCount, decrementCount, disabled }) {
+    return <Container>
         <Name id={`${name}-label`}>{name}<br />length</Name>
         <ButtonContainer>
             <Button id={`${name}-decrement`} disabled={disabled} onClick={decrementCount}><CircleMinus /></Button>
