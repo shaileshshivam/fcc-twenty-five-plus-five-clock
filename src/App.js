@@ -202,7 +202,7 @@ function App() {
 
 
 
-    if (timeElapsed === (timeToCompare * 60)) {
+    if (timeElapsed === (timeToCompare * 60) + 1) {
       audioRef.current.currentTime = 0
       if (timerRef.current) {
         clearInterval(timerRef.current)
@@ -233,9 +233,11 @@ function App() {
     audioRef.current.currentTime = 0
   }
 
-  const timerValue = timerType === "session" ?
+  let timerValue = timerType === "session" ?
     (sessionLength * 60 - timeElapsed) :
     (breakLength * 60 - timeElapsed)
+
+  timerValue = timerValue >= 0 ? timerValue : 0
 
   return (
     <Container>
